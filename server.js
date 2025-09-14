@@ -13,9 +13,10 @@ const uploadsPath = process.env.TUS_DATA_DIR || path.join(__dirname, 'files');
 fs.mkdirSync(uploadsPath, { recursive: true });
 
 // Setup tus server
-const tusServer = new Server();
-tusServer.datastore = new FileStore({
-  path: uploadsPath
+const tusServer = new Server({
+    datastore: new FileStore({
+    path: uploadsPath
+    })
 });
 
 // Attach the tus server
