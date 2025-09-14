@@ -1,13 +1,16 @@
 {
-    "name": "tus-node-server-newrelic",
-    "version": "1.0.0",
-    "main": "server.js",
-    "scripts": {
-      "start": "node server.js"
-    },
-    "dependencies": {
-      "express": "^4.18.2",
-      "tus-node-server": "^1.2.0",
-      "newrelic": "^11.0.0"
-    }
-  }  
+  "name": "tus-node-server-newrelic",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "tus-node-server": "^0.9.0",
+    "newrelic": "^11.0.0"
+  },
+  "engines": {
+    "node": ">=18.x <=20.x"
+  }
+}
