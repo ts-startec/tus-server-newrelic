@@ -1,0 +1,80 @@
+name: CI
+# SECURITY NOTE: This workflow uses pull_request_target which has access to secrets.
+# This is needed because tests require access to external services with credentials.
+# `pull_request_target` will always run without manual approval, even if "Require approval for all external contributors" is enabled in the repo settings.
+# Therefore we implement a "safe to test" label that must be manually added once we have checked that the diff is safe.
+# For PRs from forks, secrets are only provided when the "safe to test" label is present.
+# This allows maintainers to safely test external contributions while preventing
+# malicious actors from accessing secrets.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - ".changeset/**"
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled]
+    paths-ignore:
+      - "**.md"
+      - ".changeset/**"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/ci.yml
+
+concurrency: ${{ github.workflow }}--${{ github.ref }}
+
+permissions:
+  pull-requests: write
+
+jobs:
+  main:
+    name: Node.js 20
+    runs-on: ubuntu-latest
+    # Only run tests with secrets if:
+    # 1. This is a push to main, OR
+    # 2. PR is from the same repository (trusted), OR
+    # 3. PR has the "safe to test" label (maintainer approved)
+    if: |
+      github.event_name == 'push' || 
+      github.event.pull_request.head.repo.full_name == github.repository ||
+      contains(github.event.pull_request.labels.*.name, 'safe to test')
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Decrypt keyfile
+        run: ./.github/scripts/decrypt_secret.sh
+        env:
+          KEYFILE_PASSPHRASE: ${{secrets.KEYFILE_PASSPHRASE}}
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.19
+
+      - name: Install dependencies
+        run: npm ci --no-fund --no-audit
+
+      - name: Build
+        run: npm run build
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Run linters
+        run: npm run lint
+
+      - name: Run tests
+        run: npm run test
+        env:
+          AWS_BUCKET: ${{secrets.AWS_BUCKET}}
+          AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          AZURE_ACCOUNT_ID: ${{secrets.AZURE_ACCOUNT_ID}}
+          AZURE_ACCOUNT_KEY: ${{secrets.AZURE_ACCOUNT_KEY}}
+          AZURE_CONTAINER_NAME: ${{secrets.AZURE_CONTAINER_NAME}}
+          AWS_REGION: ${{secrets.AWS_REGION}}
